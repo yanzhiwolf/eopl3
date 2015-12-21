@@ -184,12 +184,40 @@
 
 
 
-;;;
+;1.25
+;exists? pred * lst -> #t/#f
+(define exists?
+  (lambda (pred lst)
+    (cond
+      ((null? lst) #f)
+      (else
+       (or (pred (car lst))
+           (exists? pred (cdr lst)))))))
+
+;(exists? number? '(a b c 3 e))
+;(exists? number? '(a b c d e))
 
 
 
+;1.26
+;up: lst -> lst
+(define up-helper
+  (lambda (lst r)
+    (if (null? lst) r
+        (cons (car lst)
+              (up-helper (cdr lst) r)))))
 
+(define up
+  (lambda (lst)
+    (if (null? lst) '()
+        (up-helper (car lst)
+                   (up (cdr lst))))))
 
+(up '((1 2) (3 4) 5 6))
+
+          
+                     
+              
 
 
 
