@@ -318,7 +318,7 @@
 ;procedures for calculating on a bintree
 (define leaf
   (lambda (c)
-    (list c)))
+    (list c '() '())))
 
 (define interior-node
   (lambda (c lson rson)
@@ -326,8 +326,8 @@
 
 (define leaf?
   (lambda (node)
-    (if (null? (cdr node)) #t
-        #f)))
+    (and (null? (cadr node))
+         (null? (caddr node)))))
 
 (define lson
   (lambda (node)
@@ -346,7 +346,7 @@
   (interior-node '1
                  (interior-node '2 (leaf '3) (leaf '4))
                  (interior-node '5 (leaf '6) (leaf '7))))
-;tree-test-int ; => '(1 (2 (3) (4)) (5 (6) (7)))
+;tree-test-int ; => '(1 (2 (3 () ()) (4 () ())) (5 (6 () ()) (7 () ())))
 
 
 ;1.32
@@ -392,7 +392,33 @@
 
 
 ;1.34
+;path n * bst -> listOf(search path)
+;usage: (path 17 '(14 (7 () (12 () ())) (26 (20 (17 () ()) ()) (31 () ())))) = (right left left)
+(define path
+  (lambda (n bst)
+    (cond
+      [(eqv? n (contents-of bst)) '()]
+      [(< n (contents-of bst))
+       (cons 'left (path n (lson bst)))]
+      [else
+       (cons 'right (path n (rson bst)))])))
+       
+
+;(path 17 '(14 (7 () (12 () ())) (26 (20 (17 () ()) ()) (31 () ()))))
+
+
+
 ;1.35
+;number-leaves: bintree -> bintree
+(define number-leaves-helper
+  (lambda (bintree number number-bintree)
+    (cond
+      ((leaf? bintree) (leaf (+ number 1))))))
+
+(define number-leaves
+  (lambda (bintree)
+    (number-leaves-helper bintree 0 '())))
+
 ;1.36
 
 
