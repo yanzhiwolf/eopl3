@@ -209,11 +209,14 @@
 
 (define up
   (lambda (lst)
-    (if (null? lst) '()
-        (up-helper (car lst)
-                   (up (cdr lst))))))
+    (cond
+      ((null? lst) '())
+      ((list? (car lst))
+       (up-helper (car lst) (up (cdr lst))))
+      (else
+       (cons (car lst) (up (cdr lst)))))))
 
-(up '((1 2) (3 4) 5 6))
+(up '(0 (1 2) (3 4) 5 6))
 
           
                      
