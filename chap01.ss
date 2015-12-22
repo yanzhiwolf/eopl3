@@ -1,3 +1,4 @@
+#lang racket
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; chapter 01
@@ -216,11 +217,210 @@
       (else
        (cons (car lst) (up (cdr lst)))))))
 
-(up '(0 (1 2) (3 4) 5 6))
+;(up '(0 (1 2) (3 4) 5 6))
 
-          
-                     
-              
+
+
+;1.27
+;flatten: slist -> slist (removes all the inner parentheses from its argument)
+;usage: (flatten '((a) () (b ()) () (c))) = '(a b c)
+(define flatten-helper
+  (lambda (slist r)
+    (cond
+      ((null? slist) r)
+      ((list? slist)
+       (flatten-helper (car slist)
+                       (flatten-helper (cdr slist) r)))
+      (else (cons slist r)))))
+
+(define flatten
+  (lambda (slist)
+    (if (null? slist) '()
+        (flatten-helper (car slist)
+                              (flatten (cdr slist))))))
+
+;(flatten '((a) b))
+;(flatten '((a) () (b ()) () (c)))
+;(flatten '((a b) c (((d)) e)))
+;(flatten '(a b (() (c))))
+
+
+
+;1.28
+;merge: loi1 × loi2 -> loi merged
+;usage: (merge '(35 62 81 90 91) '(3 83 85 90)) = '(3 35 62 81 83 85 90 90 91)
+(define merge
+  (lambda (loi1 loi2)
+    (cond
+      [(null? loi1) loi2]
+      [(null? loi2) loi1]
+      [(<= (car loi1) (car loi2))
+       (cons (car loi1)
+             (merge (cdr loi1) loi2))]
+      [else
+       (cons (car loi2) (merge loi1 (cdr loi2)))])))
+       
+;(merge '(35 62 81 90 91) '(3 83 85 90))
+
+
+
+
+;1.29
+;sort: loi -> loi sorted
+;usage: (sort '(8 2 5 2 3)) = '(2 2 3 5 8)
+(define sort-insert
+  (lambda (i loi)
+    (cond
+      [(null? loi) (cons i loi)]
+      [(<= i (car loi)) (cons i loi)]
+      [else
+       (cons (car loi)
+             (sort-insert i (cdr loi)))])))
+
+(define sort
+  (lambda (loi)
+    (if (null? loi) '()
+        (sort-insert (car loi)
+                     (sort (cdr loi))))))
+
+;(sort '(8 2 5 2 3))
+;(merge (sort '(2 5 1 8 3 2 4)) (sort '(0 9 3 1 6 4 7)))
+
+
+
+;1.30
+;sort/predicate: pred × loi -> loi
+;usage: (sort/predicate < ’(8 2 5 2 3))
+(define sort/predicate-insert
+  (lambda (pred i loi)
+    (cond
+      [(null? loi) (cons i loi)]
+      [(pred i (car loi)) (cons i loi)]
+      [else
+       (cons (car loi)
+             (sort/predicate-insert pred i (cdr loi)))])))
+
+(define sort/predicate
+  (lambda (pred loi)
+    (if (null? loi) '()
+        (sort/predicate-insert pred
+                     (car loi)
+                     (sort/predicate pred (cdr loi))))))
+
+;(sort/predicate < '(8 2 5 2 3))
+;(sort/predicate > '(8 2 5 2 3))
+
+
+;Definition 1.1.7(binary tree)
+;Bintree ::= Int | (Symbol Bintree Bintree)
+
+;1.31
+;procedures for calculating on a bintree
+(define leaf
+  (lambda (c)
+    (list c)))
+
+(define interior-node
+  (lambda (c lson rson)
+    (list c lson rson)))
+
+(define leaf?
+  (lambda (node)
+    (if (null? (cdr node)) #t
+        #f)))
+
+(define lson
+  (lambda (node)
+    (cadr node)))
+
+(define rson
+  (lambda (node)
+    (caddr node)))
+
+(define contents-of
+  (lambda (node)
+    (car node)))
+
+
+(define tree-test-int
+  (interior-node '1
+                 (interior-node '2 (leaf '3) (leaf '4))
+                 (interior-node '5 (leaf '6) (leaf '7))))
+;tree-test-int ; => '(1 (2 (3) (4)) (5 (6) (7)))
+
+
+;1.32
+;double-tree: tree -> tree with all leaf doubled
+(define double-tree
+  (lambda (tree)
+    (if (leaf? tree)
+        (cons (* 2 (contents-of tree)) '())
+        (list (contents-of tree)
+              (double-tree (lson tree))
+              (double-tree (rson tree))))))
+
+;(double-tree tree-test-int) ;=> '(1 (2 (6) (8)) (5 (12) (14)))
+
+
+
+;1.33
+;make-leaves-with-red-depth: tree -> other tree
+(define make-leaves-with-red-depth-helper
+  (lambda (tree red-depth)
+    (cond
+      ((leaf? tree) (leaf red-depth))
+      ((eqv? (contents-of tree) 'red)
+        (list (contents-of tree)
+              (make-leaves-with-red-depth-helper (lson tree) (+ red-depth 1))
+              (make-leaves-with-red-depth-helper (rson tree) (+ red-depth 1))))
+      (else
+       (list (contents-of tree)
+              (make-leaves-with-red-depth-helper (lson tree) red-depth)
+              (make-leaves-with-red-depth-helper (rson tree) red-depth))))))
+     
+(define make-leaves-with-red-depth
+  (lambda (tree)
+    (make-leaves-with-red-depth-helper tree 0)))
+
+(define tree-test-red
+  (interior-node 'red
+                 (interior-node 'bar (leaf '3) (leaf '4))
+                 (interior-node 'red (leaf '6) (leaf '7))))
+;tree-test-red
+;(make-leaves-with-red-depth tree-test-red)
+
+
+
+;1.34
+;1.35
+;1.36
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
