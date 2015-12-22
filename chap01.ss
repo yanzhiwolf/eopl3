@@ -320,7 +320,7 @@
   (lambda (c)
     (list c '() '())))
 
-(define interior-node
+(define interior-node list)
   (lambda (c lson rson)
     (list c lson rson)))
 
@@ -413,11 +413,16 @@
 (define number-leaves-helper
   (lambda (bintree number number-bintree)
     (cond
-      ((leaf? bintree) (leaf (+ number 1))))))
+      ((leaf? bintree) (leaf (+ number 1)))
+      (else
+       (innerior-node 
 
 (define number-leaves
   (lambda (bintree)
     (number-leaves-helper bintree 0 '())))
+
+
+
 
 ;1.36
 
