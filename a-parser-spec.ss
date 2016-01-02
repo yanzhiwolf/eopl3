@@ -1,4 +1,4 @@
-(define a-grammar
+(define a-grammar-spec
 	'((statement
 		  ("{" statement ";" statement "}") compound-statement)
 	  (statement
