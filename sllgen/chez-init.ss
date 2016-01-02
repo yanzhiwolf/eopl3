@@ -4,7 +4,7 @@
 (define chez-printf printf)
 (define chez-pretty-print pretty-print)
 
-(load "r5rs.ss")
+(load "sllgen/r5rs.ss")
  
 ;; use the nicer chez behavior for these
 (set! sllgen:pretty-print chez-pretty-print)
@@ -14,8 +14,8 @@
 ;; make error stop invoke the debugger
 (define eopl:error-stop break)
 
-(load "sllgen.ss")
-(load "define-datatype.ss")
+(load "sllgen/sllgen.ss")
+(load "sllgen/define-datatype.ss")
 
 ;(load "test-harness.scm")
 ;(load "test-suite.scm")
