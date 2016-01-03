@@ -15,8 +15,20 @@
   '((program (expression) a-program)
     (expression (number) const-exp)
     (expression (identifier) var-exp)
-    (expression ("-" "(" expression "," expression ")") diff-exp)
+    (expression ("*" "(" expression "," expression ")") mul-exp)
+    (expression ("/" "(" expression "," expression ")") div-exp)
+    (expression ("+" "(" expression "," expression ")") add-exp)
+    (expression ("-" "(" expression "," expression ")") sub-exp)
+    (expression ("minus" "(" expression ")") minus-exp)
     (expression ("zero?" "(" expression ")") zero?-exp)
+    (expression ("equal?" "(" expression "," expression ")") equal?-exp)
+    (expression ("greater?" "(" expression "," expression ")") greater?-exp)
+    (expression ("less?" "(" expression "," expression ")") less?-exp)
+    (expression ("cons" "(" expression "," expression ")") cons-exp)
+    (expression ("car" "(" expression ")") car-exp)
+    (expression ("cdr" "(" expression ")") cdr-exp)
+    (expression ("null?" "(" expression ")") null?-exp)
+    (expression ("emptylist") emptylist-exp)
     (expression ("if" expression "then" expression "else" expression) if-exp)
     (expression ("let" identifier "=" expression "in" expression) let-exp)))
 
@@ -51,12 +63,16 @@
      (extend-env
       'v (num-val 5)
       (extend-env
-       'x (num-val 10))))))
+       'x (num-val 10)
+       (empty-env))))))
 
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;the expressed value for LET language
 (define-datatype expval expval?
   (num-val (num number?))
-  (bool-val (bool boolean?)))
+  (bool-val (bool boolean?))
+  (list-val (lst list?)))
 
 ;expval->num : ExpVal -> Int
 (define expval->num
@@ -71,6 +87,13 @@
     (cases expval val
       (bool-val (bool) bool)
       (else (report-expval-extractor-error 'bool val)))))
+
+;expval->list : ExpVal -> List
+(define expval->list
+  (lambda (val)
+    (cases expval val
+      (list-val (lst) lst)
+      (else (report-expval-extractor-error 'list val)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -90,29 +113,131 @@
 (define value-of
   (lambda (exp env)
     (cases expression exp
+      
       (const-exp (num) (num-val num))
+      
       (var-exp (var) (apply-env env var))
-      (diff-exp (exp1 exp2)
+
+      (mul-exp (exp1 exp2)
+               (let ((val1 (value-of exp1 env))
+                     (val2 (value-of exp2 env)))
+                 (let ((num1 (expval->num val1))
+                       (num2 (expval->num val2)))
+                   (num-val (* num1 num2)))))
+
+      (div-exp (exp1 exp2)
+               (let ((val1 (value-of exp1 env))
+                     (val2 (value-of exp2 env)))
+                 (let ((num1 (expval->num val1))
+                       (num2 (expval->num val2)))
+                   (num-val (/ num1 num2)))))
+      
+      (add-exp (exp1 exp2)
+               (let ((val1 (value-of exp1 env))
+                     (val2 (value-of exp2 env)))
+                 (let ((num1 (expval->num val1))
+                       (num2 (expval->num val2)))
+                   (num-val (+ num1 num2)))))
+      
+      (sub-exp (exp1 exp2)
                 (let ((val1 (value-of exp1 env))
                       (val2 (value-of exp2 env)))
                   (let ((num1 (expval->num val1))
                         (num2 (expval->num val2)))
-                    (num-val
-                     (- num1 num2)))))
+                    (num-val (- num1 num2)))))
+
+      (minus-exp (exp1)
+                 (let ((val1 (value-of exp1 env)))
+                   (let ((num1 (expval->num val1)))
+                     (num-val (- num1)))))
+      
       (zero?-exp (exp1)
                  (let ((val1 (value-of exp1 env)))
                    (let ((num1 (expval->num val1)))
                      (if (zero? num1)
                          (bool-val #t)
                          (bool-val #f)))))
+
+      (equal?-exp (exp1 exp2)
+                  (let ((val1 (value-of exp1 env))
+                        (val2 (value-of exp2 env)))
+                    (let ((num1 (expval->num val1))
+                          (num2 (expval->num val2)))
+                      (if (= num1 num2)
+                          (bool-val #t)
+                          (bool-val #f)))))
+
+      (greater?-exp (exp1 exp2)
+                  (let ((val1 (value-of exp1 env))
+                        (val2 (value-of exp2 env)))
+                    (let ((num1 (expval->num val1))
+                          (num2 (expval->num val2)))
+                      (if (> num1 num2)
+                          (bool-val #t)
+                          (bool-val #f)))))
+
+      (less?-exp (exp1 exp2)
+                  (let ((val1 (value-of exp1 env))
+                        (val2 (value-of exp2 env)))
+                    (let ((num1 (expval->num val1))
+                          (num2 (expval->num val2)))
+                      (if (< num1 num2)
+                          (bool-val #t)
+                          (bool-val #f)))))
+
+      ;(expression ("cons" "(" expression "," expression ")") cons-exp)
+      (cons-exp (exp1 exp2)
+                (let ((val1 (value-of exp1 env))
+                      (val2 (value-of exp2 env)))
+                  (list-val (list val1 val2))))
+      
+      ;(expression ("car" "(" expression ")") car-exp)
+      (car-exp (exp1)
+               (let ((val1 (value-of exp1 env)))
+                 (let ((lst1 (expval->list val1)))
+                   (car lst1))))
+      
+      ;(expression ("cdr" "(" expression ")") cdr-exp)
+      (cdr-exp (exp1)
+               (let ((val1 (value-of exp1 env)))
+                 (let ((lst1 (expval->list val1)))
+                   (cdr lst1))))
+
+      ;(expression ("null?" "(" expression ")") null?-exp)
+      (null?-exp (exp1)
+               (let ((val1 (value-of exp1 env)))
+                 (let ((lst1 (expval->list val1)))
+                   (null? lst1))))
+
+      ;(expression ("emptylist" emptylist-exp)
+      (emptylist-exp ()
+                     (list-val '()))
+
       (if-exp (exp1 exp2 exp3)
               (let ((val1 (value-of exp1 env)))
                 (if (expval->bool val1)
                     (value-of exp2 env)
                     (value-of exp3 env))))
+      
       (let-exp (var exp1 body)
                (let ((var1 (value-of exp1 env)))
                  (value-of body (extend-env var var1 env)))))))
-              
-                
-     
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;test
+(run "5")
+(run "i")
+(run "-(i, -(v, x))")
+(run "let y = -(i, -(v,x)) in y")
+(run "if zero?(0) then 1 else 2")
+(run "equal?(2,3)")
+(run "greater?(2,3)")
+(run "less?(2,3)")
+(run "cons (1,2)")
+(run "car (cons (1, 2))")
+(run "cdr (cons (1, 2))")
+(run "emptylist")
+(run "null? (emptylist)")
+(run "let x=4 in cons(x, cons(cons(-(x,1),emptylist),emptylist))")
