@@ -70,11 +70,13 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;the expressed value for LET language
+;an expressed value is either a number, a boolean or a list
 (define-datatype expval expval?
   (num-val (num number?))
   (bool-val (bool boolean?))
   (list-val (lst list?)))
 
+;;; Extractors:
 ;expval->num : ExpVal -> Int
 (define expval->num
   (lambda (val)
