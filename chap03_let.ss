@@ -19,6 +19,9 @@
     (expression ("/" "(" expression "," expression ")") div-exp)
     (expression ("+" "(" expression "," expression ")") add-exp)
     (expression ("-" "(" expression "," expression ")") sub-exp)
+    (expression ("if" expression "then" expression "else" expression) if-exp)
+    (expression ("cond" (arbno expression "==>" expression) "end") cond-exp)
+    (expression ("let" identifier "=" expression "in" expression) let-exp)
     (expression ("minus" "(" expression ")") minus-exp)
     (expression ("zero?" "(" expression ")") zero?-exp)
     (expression ("equal?" "(" expression "," expression ")") equal?-exp)
@@ -29,10 +32,7 @@
     (expression ("car" "(" expression ")") car-exp)
     (expression ("cdr" "(" expression ")") cdr-exp)
     (expression ("null?" "(" expression ")") null?-exp)
-    (expression ("emptylist") emptylist-exp)
-    (expression ("if" expression "then" expression "else" expression) if-exp)
-    (expression ("let" identifier "=" expression "in" expression) let-exp)))
-
+    (expression ("emptylist") emptylist-exp)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;parser define
@@ -222,12 +222,25 @@
       (emptylist-exp ()
                      (list-val '()))
 
+      ;(expression ("if" expression "then" expression "else" expression) if-exp)
       (if-exp (exp1 exp2 exp3)
               (let ((val1 (value-of exp1 env)))
                 (if (expval->bool val1)
                     (value-of exp2 env)
                     (value-of exp3 env))))
-      
+
+      ;(expression ("cond" (arbno expression "==>" expression) "end") cond-exp)
+      (cond-exp (args1 args2)
+                (letrec ((calc-cond
+                          (lambda (condlst bodylst)
+                            (cond
+                              [(null? condlst) (report-expression-error 'cond)]
+                              [(expval->bool (value-of (car condlst) env)) (value-of (car bodylst) env)]
+                              [else
+                               (calc-cond (cdr condlst) (cdr bodylst))]))))
+                  (calc-cond args1 args2)))
+
+      ;(expression ("let" identifier "=" expression "in" expression) let-exp)))
       (let-exp (var exp1 body)
                (let ((var1 (value-of exp1 env)))
                  (value-of body (extend-env var var1 env)))))))
@@ -252,3 +265,4 @@
 (run "let x=4 in cons(x, cons(cons(-(x,1),emptylist),emptylist))")
 (run "list(1,2,3)")
 (run "let x=1 in list(x, -(4,x), minus(x))")
+(run "cond less?(2,3) ==> list(1,2,3) end")
