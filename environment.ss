@@ -8,7 +8,6 @@
   (lambda (var val env)
     (cons (cons var val) env)))
 
-
 ;apply-env: Var * Env -> SchemeVal
 (define apply-env
   (lambda (env search-var)

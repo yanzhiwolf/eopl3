@@ -21,7 +21,8 @@
     (expression ("-" "(" expression "," expression ")") sub-exp)
     (expression ("if" expression "then" expression "else" expression) if-exp)
     (expression ("cond" (arbno expression "==>" expression) "end") cond-exp)
-    (expression ("let" identifier "=" expression "in" expression) let-exp)
+    (expression ("let" (arbno identifier "=" expression) "in" expression) let-exp)
+    (expression ("let*" (arbno identifier "=" expression) "in" expression) let*-exp)
     (expression ("minus" "(" expression ")") minus-exp)
     (expression ("zero?" "(" expression ")") zero?-exp)
     (expression ("equal?" "(" expression "," expression ")") equal?-exp)
@@ -244,9 +245,27 @@
                   (cond-val args1 args2)))
 
       ;(expression ("let" identifier "=" expression "in" expression) let-exp)))
-      (let-exp (var exp1 body)
-               (let ((var1 (value-of exp1 env)))
-                 (value-of body (extend-env var var1 env))))
+      (let-exp (vars exps body)
+               (let ((vals (map (lambda (exp) (value-of exp env)) exps)))
+                 (letrec ((bind-let
+                           (lambda (varlst vallst env-let)
+                             (if (null? varlst)
+                                 env-let
+                                 (let ((var (car varlst))
+                                       (val (car vallst)))
+                                   (bind-let (cdr varlst) (cdr vallst) (extend-env var val env-let)))))))
+                   (value-of body (bind-let vars vals env)))))
+
+      ;(expression ("let*" (arbno identifier "=" expression) "in" expression) let*-exp)
+      (let*-exp (vars exps body)
+                (letrec ((bind-let*
+                          (lambda (varlst explst env-let*)
+                            (if (null? varlst)
+                                env-let*
+                                (let ((var (car varlst))
+                                      (val (value-of (car explst) env-let*)))
+                                  (bind-let* (cdr varlst) (cdr explst) (extend-env var val env-let*)))))))
+                  (value-of body (bind-let* vars exps env))))
 
       ;(expression ("print" "(" expression ")") print-exp)
       (print-exp (exp1)
@@ -276,3 +295,5 @@
 (run "cond less?(2,3) ==> list(1,2,3) end")
 (run "print(2)")
 (run "print(list(1,2,3))")
+(run "let x=30 in let x = -(x,1) y = -(x,2) in -(x, y)")   ;=1
+(run "let x=30 in let* x = -(x,1) y = -(x,2) in -(x,y)")  ;=2
