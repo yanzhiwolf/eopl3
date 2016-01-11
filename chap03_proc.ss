@@ -3,7 +3,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;LET scanner specification
-(define let-scanner-spec
+(define scanner-spec
   '((white-sp (whitespace) skip)
     (commet ("%" (arbno (not #\newline))) skip)
     (identifier (letter (arbno (or letter digit))) symbol)
@@ -11,7 +11,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;LET parser specification
-(define let-parser-spec
+(define parser-spec
   '((program (expression) a-program)
     (expression (number) const-exp)
     (expression (identifier) var-exp)
@@ -35,27 +35,29 @@
     (expression ("cdr" "(" expression ")") cdr-exp)
     (expression ("null?" "(" expression ")") null?-exp)
     (expression ("emptylist") emptylist-exp)
-    (expression ("print" "(" expression ")") print-exp)))
+    (expression ("print" "(" expression ")") print-exp)
+    (expression ("proc" "(" identifier ")" expression) proc-exp)
+    (expression ("(" expression expression ")") call-exp)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;parser define
-(define let-scan-parse
-  (sllgen:make-string-parser let-scanner-spec let-parser-spec))
+(define scan-parse
+  (sllgen:make-string-parser scanner-spec parser-spec))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;for debug
-(define let-just-scan
-  (sllgen:make-string-scanner let-scanner-spec let-parser-spec))
+(define just-scan
+  (sllgen:make-string-scanner scanner-spec parser-spec))
 
-(define let-list-the-datatypes
+(define list-the-datatypes
   (lambda ()
-    (sllgen:list-define-datatypes let-scanner-spec let-parser-spec)))
+    (sllgen:list-define-datatypes scanner-spec parser-spec)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;LET define datatypes
-(sllgen:make-define-datatypes let-scanner-spec let-parser-spec)
+(sllgen:make-define-datatypes scanner-spec parser-spec)
 
 
 ;init-env: () -> Env
@@ -72,14 +74,13 @@
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;the expressed value for LET language
-;an expressed value is either a number, a boolean or a list
+;The interface of expressed value
 (define-datatype expval expval?
   (num-val (num number?))
   (bool-val (bool boolean?))
-  (list-val (lst list?)))
+  (list-val (lst list?))
+  (proc-val (proc proc?)))
 
-;;; Extractors:
 ;expval->num : ExpVal -> Int
 (define expval->num
   (lambda (val)
@@ -101,13 +102,39 @@
       (list-val (lst) lst)
       (else (eopl:pretty-print 'list val)))))
 
+;expval->proc : ExpVal -> Proc
+(define expval->proc
+  (lambda (val)
+    (cases expval val
+      (proc-val (proc) proc)
+      (else (eopl:pretty-print 'num val)))))
+
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;The interface of proc
+;SchemeVal -> Bool
+(define proc? procedure?)
+
+;Var * Exp * Env -> Proc
+(define procedure
+  (lambda (var exp env)
+    (lambda (val)
+      (value-of body (extend-env var val env)))))
+
+;Proc * ExpVal -> ExpVal
+(define apply-procedure
+  (lambda (proc1 val)
+    (proc1 val)))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;Interpreter
 ;run : String -> ExpVal
 (define run
   (lambda (pgm-text)
-    (value-of-program (let-scan-parse pgm-text))))
+    (value-of-program (scan-parse pgm-text))))
 
 ;value-of-program : Program -> ExpVal
 (define value-of-program
@@ -242,7 +269,7 @@
                               [(null? conds) (report-expression-error 'cond)]
                               [(expval->bool (value-of (car conds) env)) (value-of (car acts) env)]
                               [else
-                               (cond-val (cdr conds) (cdr acts))]))))d
+                               (cond-val (cdr conds) (cdr acts))]))))
                   (cond-val args1 args2)))
 
       ;(expression ("let" identifier "=" expression "in" expression) let-exp)))
@@ -270,7 +297,19 @@
       ;(expression ("print" "(" expression ")") print-exp)
       (print-exp (exp1)
                  (let ((var1 (value-of exp1 env)))
-                   (begin (display var1) (num-val 1) (newline)))))))
+                   (begin (display var1) (num-val 1) (newline))))
+
+      ;(expression ("proc" "(" identifier ")" expression) proc-exp)
+      (proc-exp (var body)
+                (proc-val (procedure var body env)))
+
+      ;(expression (expression expression) apply-exp)
+      (call-exp (rator rand)
+                (let ((proc1 (expval->proc (value-of rator env)))
+                      (arg (value-of rand env)))
+                  (apply-procedure proc1 arg)))
+      
+      )))
 
 
 
@@ -299,3 +338,5 @@
 (run "let x=30 in let* x = -(x,1) y = -(x,2) in -(x,y)")  ;=2
 (run "print(let u=7 in cons(u, cons(3, emptylist)))")
 ;(run "let u=7 in unpack x y = cons(u, cons(3, emptylist)) in -(x,y)")
+
+;(run "let f = proc (x) -(x,11) in (f (f 77))")

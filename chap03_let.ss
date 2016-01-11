@@ -3,7 +3,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;LET scanner specification
-(define let-scanner-spec
+(define scanner-spec
   '((white-sp (whitespace) skip)
     (commet ("%" (arbno (not #\newline))) skip)
     (identifier (letter (arbno (or letter digit))) symbol)
@@ -11,7 +11,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;LET parser specification
-(define let-parser-spec
+(define parser-spec
   '((program (expression) a-program)
     (expression (number) const-exp)
     (expression (identifier) var-exp)
@@ -39,23 +39,23 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;parser define
-(define let-scan-parse
-  (sllgen:make-string-parser let-scanner-spec let-parser-spec))
+(define scan-parse
+  (sllgen:make-string-parser scanner-spec parser-spec))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;for debug
-(define let-just-scan
-  (sllgen:make-string-scanner let-scanner-spec let-parser-spec))
+(define just-scan
+  (sllgen:make-string-scanner scanner-spec parser-spec))
 
-(define let-list-the-datatypes
+(define list-the-datatypes
   (lambda ()
-    (sllgen:list-define-datatypes let-scanner-spec let-parser-spec)))
+    (sllgen:list-define-datatypes scanner-spec parser-spec)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;LET define datatypes
-(sllgen:make-define-datatypes let-scanner-spec let-parser-spec)
+(sllgen:make-define-datatypes scanner-spec parser-spec)
 
 
 ;init-env: () -> Env
@@ -77,7 +77,8 @@
 (define-datatype expval expval?
   (num-val (num number?))
   (bool-val (bool boolean?))
-  (list-val (lst list?)))
+  (list-val (lst list?))
+  (proc-val (proc procedure?)))
 
 ;;; Extractors:
 ;expval->num : ExpVal -> Int
@@ -107,7 +108,7 @@
 ;run : String -> ExpVal
 (define run
   (lambda (pgm-text)
-    (value-of-program (let-scan-parse pgm-text))))
+    (value-of-program (scan-parse pgm-text))))
 
 ;value-of-program : Program -> ExpVal
 (define value-of-program
@@ -242,7 +243,7 @@
                               [(null? conds) (report-expression-error 'cond)]
                               [(expval->bool (value-of (car conds) env)) (value-of (car acts) env)]
                               [else
-                               (cond-val (cdr conds) (cdr acts))]))))d
+                               (cond-val (cdr conds) (cdr acts))]))))
                   (cond-val args1 args2)))
 
       ;(expression ("let" identifier "=" expression "in" expression) let-exp)))
