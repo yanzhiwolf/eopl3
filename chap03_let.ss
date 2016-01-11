@@ -23,6 +23,7 @@
     (expression ("cond" (arbno expression "==>" expression) "end") cond-exp)
     (expression ("let" (arbno identifier "=" expression) "in" expression) let-exp)
     (expression ("let*" (arbno identifier "=" expression) "in" expression) let*-exp)
+    (expression ("unpack" (arbno identifier) "=" expression "in" expression) unpack-exp)
     (expression ("minus" "(" expression ")") minus-exp)
     (expression ("zero?" "(" expression ")") zero?-exp)
     (expression ("equal?" "(" expression "," expression ")") equal?-exp)
@@ -84,21 +85,21 @@
   (lambda (val)
     (cases expval val
       (num-val (num) num)
-      (else (report-expval-extractor-error 'num val)))))
+      (else (eopl:pretty-print 'num val)))))
 
 ;expval->bool : ExpVal -> Bool
 (define expval->bool
   (lambda (val)
     (cases expval val
       (bool-val (bool) bool)
-      (else (report-expval-extractor-error 'bool val)))))
+      (else (eopl:pretty-print 'bool val)))))
 
 ;expval->list : ExpVal -> List
 (define expval->list
   (lambda (val)
     (cases expval val
       (list-val (lst) lst)
-      (else (report-expval-extractor-error 'list val)))))
+      (else (eopl:pretty-print 'list val)))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -241,20 +242,13 @@
                               [(null? conds) (report-expression-error 'cond)]
                               [(expval->bool (value-of (car conds) env)) (value-of (car acts) env)]
                               [else
-                               (cond-val (cdr conds) (cdr acts))]))))
+                               (cond-val (cdr conds) (cdr acts))]))))d
                   (cond-val args1 args2)))
 
       ;(expression ("let" identifier "=" expression "in" expression) let-exp)))
       (let-exp (vars exps body)
                (let ((vals (map (lambda (exp) (value-of exp env)) exps)))
-                 (letrec ((bind-let
-                           (lambda (varlst vallst env-let)
-                             (if (null? varlst)
-                                 env-let
-                                 (let ((var (car varlst))
-                                       (val (car vallst)))
-                                   (bind-let (cdr varlst) (cdr vallst) (extend-env var val env-let)))))))
-                   (value-of body (bind-let vars vals env)))))
+                   (value-of body (extend-env-list vars vals env))))
 
       ;(expression ("let*" (arbno identifier "=" expression) "in" expression) let*-exp)
       (let*-exp (vars exps body)
@@ -267,10 +261,16 @@
                                   (bind-let* (cdr varlst) (cdr explst) (extend-env var val env-let*)))))))
                   (value-of body (bind-let* vars exps env))))
 
+      ;(expression ("unpack" (arbno identifier) "=" expression "in" expression) unpack-exp)
+      (unpack-exp (vars exp1 body)
+                  (let ((expressed-vals (value-of exp1 env)))
+                    (let ((vals (expval->list expressed-vals)))
+                      (value-of body (extend-env-list vars vals env)))))
+                    
       ;(expression ("print" "(" expression ")") print-exp)
       (print-exp (exp1)
                  (let ((var1 (value-of exp1 env)))
-                   (begin (display var1) (num-val 1)))))))
+                   (begin (display var1) (num-val 1) (newline)))))))
 
 
 
@@ -297,3 +297,5 @@
 (run "print(list(1,2,3))")
 (run "let x=30 in let x = -(x,1) y = -(x,2) in -(x, y)")   ;=1
 (run "let x=30 in let* x = -(x,1) y = -(x,2) in -(x,y)")  ;=2
+(run "print(let u=7 in cons(u, cons(3, emptylist)))")
+;(run "let u=7 in unpack x y = cons(u, cons(3, emptylist)) in -(x,y)")
