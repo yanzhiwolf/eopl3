@@ -1,8 +1,10 @@
+
+
 (load "sllgen/chez-init.ss")
 (load "environment.ss")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;LET scanner specification
+;scanner specification
 (define scanner-spec
   '((white-sp (whitespace) skip)
     (commet ("%" (arbno (not #\newline))) skip)
@@ -10,7 +12,7 @@
     (number (digit (arbno digit)) number)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;LET parser specification
+;parser specification
 (define parser-spec
   '((program (expression) a-program)
     (expression (number) const-exp)
@@ -21,8 +23,8 @@
     (expression ("let" (arbno identifier "=" expression) "in" expression) let-exp)
     (expression ("let*" (arbno identifier "=" expression) "in" expression) let*-exp)
     (expression ("zero?" "(" expression ")") zero?-exp)
-    (expression ("proc" "(" identifier ")" expression) proc-exp)
-    (expression ("(" expression expression ")") call-exp)))
+    (expression ("proc" "(" (arbno identifier) ")" expression) proc-exp)
+    (expression ("(" expression (arbno expression) ")") call-exp)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;parser define
@@ -96,14 +98,14 @@
 
 ;Var * Exp * Env -> Proc
 (define procedure
-  (lambda (var exp env)
-    (lambda (val)
-      (value-of exp (extend-env var val env)))))
+  (lambda (vars exp env)
+    (lambda (vals)
+      (value-of exp (extend-env-list vars vals env)))))
 
 ;Proc * ExpVal -> ExpVal
 (define apply-procedure
-  (lambda (proc1 val)
-    (proc1 val)))
+  (lambda (proc1 vals)
+    (proc1 vals)))
 
 
 
@@ -180,18 +182,15 @@
                   (value-of body (bind-let* vars exps env))))
 
       ;(expression ("proc" "(" identifier ")" expression) proc-exp)
-      (proc-exp (var body)
-                (proc-val (procedure var body env)))
+      (proc-exp (vars body)
+                (proc-val (procedure vars body env)))
 
       ;(expression (expression expression) apply-exp)
-      (call-exp (rator rand)
+      (call-exp (rator rands)
                 (let ((proc1 (expval->proc (value-of rator env)))
-                      (arg (value-of rand env)))
-                  (apply-procedure proc1 arg)))
-      
-      )))
-
-
+                      (args (map (lambda (rand)
+                                   (value-of rand env)) rands)))
+                  (apply-procedure proc1 args))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;test
@@ -203,4 +202,4 @@
 (run "let x=30 in let x = -(x,1) y = -(x,2) in -(x, y)")   ;=1
 (run "let x=30 in let* x = -(x,1) y = -(x,2) in -(x,y)")  ;=2
 (run "let f = proc (x) -(x,11) in (f (f 77))")
-(run "let f = proc(x) proc(y) -(x, -(0, y)) in ((f 1) 2)")
+(run "let f = proc(x y) -(x, -(0,y)) in (f 2 3)")
